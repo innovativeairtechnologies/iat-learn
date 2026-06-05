@@ -56,7 +56,7 @@ export default async function AdminReportsPage() {
   const uniqueLearners = new Set((progress ?? []).map(r => r.user_id)).size
 
   return (
-    <div className="animate-fade-in">
+    <div className="animate-fade-in px-8 pt-8 pb-8">
       <div className="mb-6">
         <h1 className="text-xl font-bold tracking-tight" style={{ color: 'var(--text-1)' }}>Reports</h1>
         <p className="text-sm mt-0.5" style={{ color: 'var(--text-3)' }}>Completion rates, engagement, and learner activity</p>

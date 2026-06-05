@@ -100,7 +100,7 @@ export default function PathsClient({ initialPaths, allSubjects }: Props) {
   }
 
   return (
-    <div className="animate-fade-in">
+    <div className="animate-fade-in px-8 pt-8 pb-8">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
