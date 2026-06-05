@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { BookOpen, Trophy, CheckCircle2, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 
@@ -6,15 +7,16 @@ export default async function EmployeeDashboardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
+  const adminClient = createAdminClient()
+
   const [
     { data: profile },
     { count: subjectCount },
     { count: completedCount },
   ] = await Promise.all([
-    supabase.from('user_profiles').select('display_name, points, departments(name)').eq('id', user!.id).single(),
-    supabase.from('subjects').select('*', { count: 'exact', head: true }).eq('is_published', true),
-    // Gracefully handle if migration hasn't run yet
-    supabase.from('user_step_progress').select('*', { count: 'exact', head: true }).eq('user_id', user!.id).eq('status', 'completed'),
+    adminClient.from('user_profiles').select('display_name, points, departments(name)').eq('id', user!.id).single(),
+    adminClient.from('subjects').select('*', { count: 'exact', head: true }).eq('is_published', true),
+    adminClient.from('user_step_progress').select('*', { count: 'exact', head: true }).eq('user_id', user!.id).eq('status', 'completed'),
   ])
 
   const firstName = profile?.display_name?.split(' ')[0] ?? 'there'
