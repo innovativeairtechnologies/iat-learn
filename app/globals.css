@@ -154,6 +154,7 @@
 .dark .stat-card-purple { border-color: rgba(167,139,250,0.2) !important; box-shadow: 0 0 0 1px rgba(167,139,250,0.1), var(--card-shadow) !important; }
 .dark .stat-card-cyan   { border-color: rgba(34,211,238,0.2)  !important; box-shadow: 0 0 0 1px rgba(34,211,238,0.1), var(--card-shadow) !important; }
 .dark .stat-card-green  { border-color: rgba(16,192,96,0.2)   !important; box-shadow: 0 0 0 1px rgba(16,192,96,0.1), var(--card-shadow) !important; }
+.dark .stat-card-red    { border-color: rgba(248,113,113,0.2) !important; box-shadow: 0 0 0 1px rgba(248,113,113,0.1), var(--card-shadow) !important; }
 
 
 /* ── Utilities ────────────────────────────────────────────────────────────── */

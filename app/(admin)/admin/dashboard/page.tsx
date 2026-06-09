@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { Users, BookOpen, Route, ArrowUpRight, Zap, Building2 } from 'lucide-react'
+import { createTicketingClient } from '@/lib/supabase/ticketing'
+import { Users, BookOpen, ArrowUpRight, Building2, Ticket, Clock } from 'lucide-react'
 import Link from 'next/link'
 
 export default async function AdminDashboardPage() {
@@ -8,20 +9,31 @@ export default async function AdminDashboardPage() {
   const { data: { user } } = await supabase.auth.getUser()
 
   const admin = createAdminClient()
-  const [{ data: profile }, { count: userCount }, { count: activeCount }, { count: subjectCount }] = await Promise.all([
+  const ticketing = createTicketingClient()
+
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+
+  const [
+    { data: profile },
+    { count: userCount },
+    { count: subjectCount },
+    { count: openTicketCount },
+    { count: weekTicketCount },
+  ] = await Promise.all([
     admin.from('user_profiles').select('display_name').eq('id', user!.id).single(),
     admin.from('user_profiles').select('*', { count: 'exact', head: true }),
-    admin.from('user_profiles').select('*', { count: 'exact', head: true }).eq('is_active', true),
     admin.from('subjects').select('*', { count: 'exact', head: true }).eq('is_published', true),
+    ticketing.from('tickets').select('*', { count: 'exact', head: true }).eq('status', 'open'),
+    ticketing.from('tickets').select('*', { count: 'exact', head: true }).gte('created_at', weekAgo),
   ])
 
   const firstName = profile?.display_name?.split(' ')[0] ?? 'there'
 
   const stats = [
-    { label: 'Total Members',  value: String(userCount ?? 0),  icon: Users,    color: '#60a5fa', bg: 'rgba(96,165,250,0.12)',   cardClass: 'stat-card-blue'   },
-    { label: 'Active Users',   value: String(activeCount ?? 0), icon: Zap,     color: '#fbbf24', bg: 'rgba(251,191,36,0.12)',   cardClass: 'stat-card-amber'  },
-    { label: 'Published Subjects', value: String(subjectCount ?? 0), icon: BookOpen, color: '#a78bfa', bg: 'rgba(167,139,250,0.12)', cardClass: 'stat-card-purple' },
-    { label: 'Paths Assigned',    value: '—',                       icon: Route,    color: '#22d3ee', bg: 'rgba(34,211,238,0.12)',  cardClass: 'stat-card-cyan', soon: true },
+    { label: 'Total Members',      value: String(userCount ?? 0),        icon: Users,    color: '#60a5fa', bg: 'rgba(96,165,250,0.12)',   cardClass: 'stat-card-blue'   },
+    { label: 'Published Subjects', value: String(subjectCount ?? 0),     icon: BookOpen, color: '#a78bfa', bg: 'rgba(167,139,250,0.12)', cardClass: 'stat-card-purple' },
+    { label: 'Open Tickets',       value: String(openTicketCount ?? 0),  icon: Ticket,   color: '#f87171', bg: 'rgba(248,113,113,0.12)', cardClass: 'stat-card-red'    },
+    { label: 'Tickets This Week',  value: String(weekTicketCount ?? 0),  icon: Clock,    color: '#34d399', bg: 'rgba(52,211,153,0.12)',  cardClass: 'stat-card-green'  },
   ]
 
   const roadmap = [
@@ -37,10 +49,9 @@ export default async function AdminDashboardPage() {
   const pct = Math.round((doneCount / roadmap.length) * 100)
 
   const quickActions = [
-    { label: 'Invite a team member',  sub: 'Send an email invite',         href: '/admin/users',       icon: Users,     available: true  },
-    { label: 'Manage departments',    sub: 'Add or edit departments',      href: '/admin/departments', icon: Building2, available: true  },
-    { label: 'Create a subject',      sub: 'Build your content library',   href: '/admin/content',     icon: BookOpen,  available: true  },
-    { label: 'Build a learning path', sub: 'Available in Phase 2',         href: '#',                  icon: Route,     available: false },
+    { label: 'Invite a team member', sub: 'Send an email invite',       href: '/admin/users',       icon: Users     },
+    { label: 'Manage departments',   sub: 'Add or edit departments',    href: '/admin/departments', icon: Building2 },
+    { label: 'Create a subject',     sub: 'Build your content library', href: '/admin/content',     icon: BookOpen  },
   ]
 
   return (
@@ -65,15 +76,10 @@ export default async function AdminDashboardPage() {
             const Icon = stat.icon
             return (
               <div key={stat.label} className={`card p-4 relative overflow-hidden ${stat.cardClass}`}>
-                {stat.soon && (
-                  <div className="absolute top-2.5 right-2.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full" style={{ background: 'var(--surface-2)', color: 'var(--text-3)' }}>
-                    Phase 2
-                  </div>
-                )}
                 <div className="w-8 h-8 rounded-[8px] flex items-center justify-center mb-3" style={{ background: stat.bg }}>
                   <Icon className="w-4 h-4" style={{ color: stat.color }} />
                 </div>
-                <p className="text-2xl font-extrabold tracking-tight" style={{ color: stat.soon ? 'var(--text-3)' : 'var(--text-1)' }}>
+                <p className="text-2xl font-extrabold tracking-tight" style={{ color: 'var(--text-1)' }}>
                   {stat.value}
                 </p>
                 <p className="text-xs mt-0.5 font-medium" style={{ color: 'var(--text-3)' }}>{stat.label}</p>
@@ -121,7 +127,7 @@ export default async function AdminDashboardPage() {
             <div className="space-y-1">
               {quickActions.map((action) => {
                 const Icon = action.icon
-                return action.available ? (
+                return (
                   <Link
                     key={action.label}
                     href={action.href}
@@ -136,16 +142,6 @@ export default async function AdminDashboardPage() {
                     </div>
                     <ArrowUpRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--text-3)' }} />
                   </Link>
-                ) : (
-                  <div key={action.label} className="flex items-center gap-3 px-3 py-2.5 rounded-lg opacity-40 cursor-not-allowed">
-                    <div className="w-8 h-8 rounded-[8px] flex items-center justify-center shrink-0" style={{ background: 'var(--surface-2)' }}>
-                      <Icon className="w-4 h-4" style={{ color: 'var(--text-2)' }} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium" style={{ color: 'var(--text-1)' }}>{action.label}</p>
-                      <p className="text-xs" style={{ color: 'var(--text-3)' }}>{action.sub}</p>
-                    </div>
-                  </div>
                 )
               })}
             </div>
